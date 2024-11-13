@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Interaction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+
+        textarea,
+        input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .loading {
+            display: none;
+            margin-left: 10px;
+            font-size: 16px;
+        }
+
+        .output {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .output h3 {
+            margin-bottom: 10px;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        p {
+            margin-top: 0;
+            font-size: 14px;
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>LLM Interaction</h1>
+        <form id="llama-form">
+            <label for="system_message">System Message:</label>
+            <textarea id="system_message" name="system_message" rows="2" required></textarea>
+            <p>e.g. You are a helpful assistant. You are an expert at PostGIS and Postgresql and SQL and psql.</p>
+
+            <label for="user_message">User Message:</label>
+            <textarea id="user_message" name="user_message" rows="4" required></textarea>
+            <p>e.g. Generate sql query to get area of a school polygon from school table for first school</p>
+
+            <label for="max_tokens">Max Tokens:</label>
+            <input type="number" id="max_tokens" name="max_tokens" required min="1" />
+            <p>e.g. 200</p>
+
+            <div>
+                <button type="submit" id="submit-button">Generate Response</button>
+                <span class="loading" id="loading-icon">⏳ Loading...</span>
+            </div>
+        </form>
+        <div class="output" id="response-output">
+            <h3>Parsed Response:</h3>
+            <strong>Question:</strong>
+            <pre id="question"></pre>
+            <strong>Answer:</strong>
+            <pre id="answer"></pre>
+        </div>
+    </div>
+    <script>
+        document.getElementById("llama-form").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            // Show loading icon and disable the button
+            const loadingIcon = document.getElementById("loading-icon");
+            const submitButton = document.getElementById("submit-button");
+            loadingIcon.style.display = "inline";
+            submitButton.disabled = true;
+
+            const systemMessage = document.getElementById("system_message").value;
+            const userMessage = document.getElementById("user_message").value;
+            const maxTokens = document.getElementById("max_tokens").value;
+
+            try {
+                const response = await fetch("/llama", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        system_message: systemMessage,
+                        user_message: userMessage,
+                        max_tokens: parseInt(maxTokens)
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.response) {
+                    // Extract the text from the response
+                    const text = data.response.choices[0]?.text || "No response text available.";
+
+                    // Parse question and answer
+                    let question = "No question available.";
+                    let answer = "No answer available.";
+                    if (text.includes("[INST]") && text.includes("[/INST]")) {
+                        const parts = text.split("[/INST]");
+                        question = parts[0].replace("[INST]", "").trim();
+                        answer = parts[1]?.trim() || "No answer available.";
+                    }
+
+                    // Display the question and answer
+                    document.getElementById("question").textContent = question;
+                    document.getElementById("answer").textContent = answer;
+                } else {
+                    document.getElementById("response-output").innerHTML = `<strong>Error:</strong> ${data.detail || "Unknown error"}`;
+                }
+            } catch (error) {
+                document.getElementById("response-output").innerHTML = `<strong>Error:</strong> ${error.message}`;
+            } finally {
+                // Hide loading icon and enable the button
+                loadingIcon.style.display = "none";
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>
