@@ -1,6 +1,6 @@
 # Run LLM on CPU
 
-### Download and place file in same directory from below to try another model
+### Download and place file in same directory from below or try another model
 https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGUF/blob/main/llama-2-7b-chat.Q2_K.gguf
 
 ### Setup
